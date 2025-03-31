@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Savers: The Electric Adventure</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #e0f7fa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        h1 {
+            color: #00796b;
+            text-align: center;
+        }
+        
+        #gameContainer {
+            position: relative;
+            border: 3px solid #00796b;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        #gameCanvas {
+            background-color: #87CEEB;
+            display: block;
+        }
+        
+        #instructions {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+        }
+        
+        .info-box {
+            background-color: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        
+        ul {
+            list-style-type: square;
+        }
+        
+        .key {
+            background-color: #f1f1f1;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Power Savers: The Electric Adventure</h1>
+    
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+    </div>
+    
+    <div id="instructions">
+        <h2>How to Play</h2>
+        
+        <div class="info-box">
+            <p><strong>Mission:</strong> Learn about electricity conservation while navigating through a fun platformer!</p>
+        </div>
+        
+        <h3>Controls:</h3>
+        <ul>
+            <li><span class="key">←</span> / <span class="key">→</span> Arrow keys to move left and right</li>
+            <li><span class="key">↑</span> Arrow key to jump</li>
+            <li><span class="key">P</span> to pause the game</li>
+            <li><span class="key">R</span> to restart when game is over</li>
+        </ul>
+        
+        <h3>Game Elements:</h3>
+        <ul>
+            <li><strong>Blue Square (Player):</strong> Your character</li>
+            <li><strong>Green Squares (Power-ups):</strong> Represent energy-saving solutions. Collect them to gain energy badges!</li>
+            <li><strong>Orange Squares (Energy Wasters):</strong> Represent devices that waste electricity. Use your energy badge to fix them!</li>
+            <li><strong>Brown Rectangles:</strong> Platforms to jump on</li>
+        </ul>
+        
+        <h3>Game Goals:</h3>
+        <ul>
+            <li>Collect all green energy-saving power-ups to complete each level</li>
+            <li>Use your energy badges to fix energy-wasting appliances</li>
+            <li>Learn energy-saving tips and facts as you play</li>
+            <li>Advance through levels to learn more about energy conservation!</li>
+        </ul>
+        
+        <div class="info-box">
+            <p><strong>Educational Note:</strong> This game teaches real-world concepts about energy conservation and electricity usage. The facts and tips provided can be applied at home to help reduce your electricity consumption!</p>
+        </div>
+    </div>
+    
+    <script>
+        // Power Savers: The Electric Adventure
+        // A platformer game teaching electricity conservation
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 800;
+        canvas.height = 500;
+
+        // Game assets
+        const sprites = {
+            player: { img: null, width: 32, height: 48 },
+            background: { img: null },
+            platform: { img: null },
+            enemy: { img: null, width: 32, height: 32 },
+            powerUp: { img: null, width: 24, height: 24 },
+            energyWaster: { img: null, width: 40, height: 40 }
+        };
+
+        // Game state
+        const game = {
+            score: 0,
+            level: 1,
+            energySaved: 0,
+            gameOver: false,
+            paused: false,
+            tips: [
+                "Turn off lights when leaving a room",
+                "Unplug chargers when not in use",
+                "Use LED bulbs to save energy",
+                "Set computers to sleep mode when not in use",
+                "Close refrigerator doors quickly",
+                "Use natural light during the day",
+                "Turn off game consoles when finished playing"
+            ],
+            currentTip: 0
+        };
+
+        // Player character
+        const player = {
+            x: 100,
+            y: 300,
+            width: 32,
+            height: 48,
+            speed: 5,
+            jumpForce: 15,
+            gravity: 0.8,
+            velocityX: 0,
+            velocityY: 0,
+            jumping: false,
+            grounded: false,
+            facingRight: true,
+            hasEnergyBadge: false,
+            update() {
+                // Apply gravity
+                this.velocityY += this.gravity;
+                
+                // Apply movement
+                this.x += this.velocityX;
+                this.y += this.velocityY;
+                
+                // Check boundaries
+                if (this.x < 0) this.x = 0;
+                if (this.x > canvas.width - this.width) this.x = canvas.width - this.width;
+                
+                // Reset grounded status
+                this.grounded = false;
+                
+                // Check for platform collisions
+                platforms.forEach(platform => {
+                    if (this.y + this.height > platform.y && 
+                        this.y < platform.y + platform.height &&
+                        this.x + this.width > platform.x &&
+                        this.x < platform.x + platform.width) {
+                        
+                        // Landing on top of a platform
+                        if (this.velocityY > 0 && this.y + this.height - this.velocityY <= platform.y) {
+                            this.y = platform.y - this.height;
+                            this.velocityY = 0;
+                            this.grounded = true;
+                            this.jumping = false;
+                        }
+                    }
+                });
+                
+                // Check if fallen off the bottom
+                if (this.y > canvas.height) {
+                    this.y = 100;
+                    this.velocityY = 0;
+                    game.score -= 10;
+                    playSoundEffect('fall');
+                }
+            },
+            draw() {
+                ctx.fillStyle = this.hasEnergyBadge ? '#4CAF50' : '#3498db';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                // Draw face direction
+                ctx.fillStyle = '#ffffff';
+                if (this.facingRight) {
+                    ctx.fillRect(this.x + 22, this.y + 10, 6, 6);
+                } else {
+                    ctx.fillRect(this.x + 4, this.y + 10, 6, 6);
+                }
+            },
+            jump() {
+                if (!this.jumping && this.grounded) {
+                    this.velocityY = -this.jumpForce;
+                    this.jumping = true;
+                    this.grounded = false;
+                    playSoundEffect('jump');
+                }
+            }
+        };
+
+        // Platforms
+        const platforms = [
+            { x: 0, y: 400, width: 200, height: 20 },
+            { x: 250, y: 350, width: 150, height: 20 },
+            { x: 450, y: 300, width: 150, height: 20 },
+            { x: 650, y: 250, width: 150, height: 20 },
+            { x: 500, y: 400, width: 100, height: 20 },
+            { x: 250, y: 200, width: 100, height: 20 },
+            { x: 0, y: 250, width: 100, height: 20 }
+        ];
+
+        // Energy wasteful appliances (enemies)
+        const energyWasters = [
+            { x: 300, y: 320, width: 40, height: 40, type: 'oldFridge', points: 15, tip: "Old refrigerators use more electricity than newer, energy-efficient models" },
+            { x: 500, y: 270, width: 40, height: 40, type: 'incandescent', points: 10, tip: "Incandescent bulbs waste 90% of energy as heat" },
+            { x: 700, y: 220, width: 40, height: 40, type: 'tv', points: 5, tip: "TVs and devices on standby still use electricity" }
+        ];
+
+        // Energy saving power-ups
+        const powerUps = [
+            { x: 100, y: 220, width: 24, height: 24, type: 'solarPanel', points: 10, collected: false },
+            { x: 300, y: 170, width: 24, height: 24, type: 'ledBulb', points: 5, collected: false },
+            { x: 550, y: 370, width: 24, height: 24, type: 'smartPlug', points: 8, collected: false },
+            { x: 720, y: 220, width: 24, height: 24, type: 'windmill', points: 15, collected: false }
+        ];
+
+        // Educational facts that appear when collecting power-ups
+        const energyFacts = [
+            "LED bulbs use 75% less energy than incandescent bulbs!",
+            "Smart power strips prevent phantom energy use!",
+            "The average home has 40 devices constantly drawing power!",
+            "Solar panels can reduce your electricity bill by 50%!",
+            "Energy STAR appliances use 10-50% less energy than standard models!"
+        ];
+
+        // Game controls
+        const keys = {
+            right: false,
+            left: false,
+            up: false
+        };
+
+        // Event listeners
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight') keys.right = true;
+            if (e.key === 'ArrowLeft') keys.left = true;
+            if (e.key === 'ArrowUp') keys.up = true;
+            if (e.key === 'p') togglePause();
+            if (e.key === 'r' && game.gameOver) resetGame();
+        });
+
+        document.addEventListener('keyup', function(e) {
+            if (e.key === 'ArrowRight') keys.right = false;
+            if (e.key === 'ArrowLeft') keys.left = false;
+            if (e.key === 'ArrowUp') keys.up = false;
+        });
+
+        function togglePause() {
+            game.paused = !game.paused;
+            if (game.paused) {
+                showPauseScreen();
+            } else {
+                gameLoop();
+            }
+        }
+
+        // Game loop
+        function gameLoop() {
+            if (game.gameOver || game.paused) return;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Handle player movement
+            player.velocityX = 0;
+            if (keys.right) {
+                player.velocityX = player.speed;
+                player.facingRight = true;
+            }
+            if (keys.left) {
+                player.velocityX = -player.speed;
+                player.facingRight = false;
+            }
+            if (keys.up) {
+                player.jump();
+            }
+            
+            // Update player
+            player.update();
+            
+            // Draw platforms
+            platforms.forEach(platform => {
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+            });
+            
+            // Draw energy wasters
+            energyWasters.forEach(waster => {
+                ctx.fillStyle = '#FF5722';
+                ctx.fillRect(waster.x, waster.y, waster.width, waster.height);
+                
+                // Check collision with player
+                if (collision(player, waster)) {
+                    if (player.hasEnergyBadge) {
+                        // Player can fix the energy waster
+                        game.score += waster.points;
+                        game.energySaved += waster.points;
+                        showFactPopup(waster.tip);
+                        waster.x = -100; // Remove from game
+                        player.hasEnergyBadge = false;
+                        playSoundEffect('fix');
+                    } else {
+                        // Player takes damage
+                        game.score -= 5;
+                        player.velocityY = -10; // Bounce back
+                        playSoundEffect('hurt');
+                    }
+                }
+            });
+            
+            // Draw power-ups
+            powerUps.forEach(powerUp => {
+                if (!powerUp.collected) {
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.fillRect(powerUp.x, powerUp.y, powerUp.width, powerUp.height);
+                    
+                    // Check collision with player
+                    if (collision(player, powerUp)) {
+                        game.score += powerUp.points;
+                        powerUp.collected = true;
+                        player.hasEnergyBadge = true;
+                        showFactPopup(energyFacts[Math.floor(Math.random() * energyFacts.length)]);
+                        playSoundEffect('collect');
+                    }
+                }
+            });
+            
+            // Draw player
+            player.draw();
+            
+            // Draw score and energy saved
+            ctx.fillStyle = 'black';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Score: ${game.score}`, 20, 30);
+            ctx.fillText(`Energy Saved: ${game.energySaved} kWh`, 20, 60);
+            
+            // Check level completion
+            if (isLevelComplete()) {
+                advanceLevel();
+            }
+            
+            // Check game over
+            if (game.score < 0) {
+                gameOver();
+            }
+            
+            // Loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Collision detection
+        function collision(obj1, obj2) {
+            return obj1.x < obj2.x + obj2.width &&
+                obj1.x + obj1.width > obj2.x &&
+                obj1.y < obj2.y + obj2.height &&
+                obj1.y + obj1.height > obj2.y;
+        }
+
+        // Check if level is complete
+        function isLevelComplete() {
+            return powerUps.every(powerUp => powerUp.collected);
+        }
+
+        // Advance to next level
+        function advanceLevel() {
+            game.level++;
+            game.currentTip = (game.currentTip + 1) % game.tips.length;
+            player.x = 100;
+            player.y = 300;
+            player.hasEnergyBadge = false;
+            
+            // Reset power-ups
+            powerUps.forEach(powerUp => {
+                powerUp.collected = false;
+                powerUp.x += Math.floor(Math.random() * 100) - 50;
+                powerUp.y -= Math.floor(Math.random() * 50);
+            });
+            
+            // Reset energy wasters
+            energyWasters.forEach((waster, index) => {
+                waster.x = 250 + (index * 200);
+                waster.y = 270 + (index * -50);
+            });
+            
+            // Show level message
+            showLevelPopup();
+            
+            // Increase difficulty
+            player.gravity += 0.05;
+            platforms.forEach(platform => {
+                platform.width -= 5;
+            });
+        }
+
+        // Show level start popup
+        function showLevelPopup() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = '30px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Level ${game.level}`, canvas.width/2, canvas.height/2 - 50);
+            ctx.font = '20px Arial';
+            ctx.fillText(`Energy Saving Tip:`, canvas.width/2, canvas.height/2);
+            ctx.fillText(`${game.tips[game.currentTip]}`, canvas.width/2, canvas.height/2 + 40);
+            ctx.font = '16px Arial';
+            ctx.fillText('Press any key to continue', canvas.width/2, canvas.height/2 + 100);
+            
+            game.paused = true;
+            
+            document.addEventListener('keydown', resumeAfterPopup, { once: true });
+        }
+
+        // Show fact popup
+        function showFactPopup(fact) {
+            const popupDiv = document.createElement('div');
+            popupDiv.style.position = 'absolute';
+            popupDiv.style.top = '100px';
+            popupDiv.style.left = '50%';
+            popupDiv.style.transform = 'translateX(-50%)';
+            popupDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+            popupDiv.style.color = 'white';
+            popupDiv.style.padding = '20px';
+            popupDiv.style.borderRadius = '10px';
+            popupDiv.style.maxWidth = '400px';
+            popupDiv.style.textAlign = 'center';
+            popupDiv.style.zIndex = '100';
+            popupDiv.innerText = fact;
+            
+            document.body.appendChild(popupDiv);
+            
+            setTimeout(() => {
+                popupDiv.remove();
+            }, 3000);
+        }
+
+        // Resume game after popup
+        function resumeAfterPopup() {
+            game.paused = false;
+            gameLoop();
+        }
+
+        // Show pause screen
+        function showPauseScreen() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = '30px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Game Paused', canvas.width/2, canvas.height/2 - 50);
+            ctx.font = '20px Arial';
+            ctx.fillText('Press P to continue', canvas.width/2, canvas.height/2);
+            
+            ctx.font = '16px Arial';
+            ctx.fillText('Controls:', canvas.width/2, canvas.height/2 + 50);
+            ctx.fillText('Arrow Keys to move and jump', canvas.width/2, canvas.height/2 + 80);
+            ctx.fillText('Collect green power-ups to gain energy badges', canvas.width/2, canvas.height/2 + 110);
+            ctx.fillText('Use energy badges to fix orange energy wasters', canvas.width/2, canvas.height/2 + 140);
+        }
+
+        // Game over
+        function gameOver() {
+            game.gameOver = true;
+            
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = '40px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Game Over', canvas.width/2, canvas.height/2 - 50);
+            
+            ctx.font = '20px Arial';
+            ctx.fillText(`You reached level ${game.level}`, canvas.width/2, canvas.height/2);
+            ctx.fillText(`Total Energy Saved: ${game.energySaved} kWh`, canvas.width/2, canvas.height/2 + 40);
+            
+            ctx.font = '16px Arial';
+            ctx.fillText('Press R to restart', canvas.width/2, canvas.height/2 + 100);
+            
+            playSoundEffect('gameover');
+        }
+
+        // Reset game
+        function resetGame() {
+            game.score = 0;
+            game.level = 1;
+            game.energySaved = 0;
+            game.gameOver = false;
+            game.currentTip = 0;
+            
+            player.x = 100;
+            player.y = 300;
+            player.velocityX = 0;
+            player.velocityY = 0;
+            player.jumping = false;
+            player.hasEnergyBadge = false;
+            player.gravity = 0.8;
+            
+            // Reset platforms
+            platforms.forEach((platform, index) => {
+                platform.width = [200, 150, 150, 150, 100, 100, 100][index];
+            });
+            
+            // Reset power-ups
+            powerUps.forEach(powerUp => {
+                powerUp.collected = false;
+            });
+            
+            // Reset energy wasters
+            energyWasters[0].x = 300;
+            energyWasters[0].y = 320;
+            energyWasters[1].x = 500;
+            energyWasters[1].y = 270;
+            energyWasters[2].x = 700;
+            energyWasters[2].y = 220;
+            
+            gameLoop();
+        }
+
+        // Sound effects (placeholder functions)
+        function playSoundEffect(type) {
+            // In a real implementation, we would play actual sounds here
+            console.log(`Playing sound: ${type}`);
+        }
+
+        // Start the game
+        function startGame() {
+            showLevelPopup();
+        }
+
+        // Initialize the game
+        window.onload = function() {
+            startGame();
+        };
+    </script>
+</body>
+</html>
